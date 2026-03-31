@@ -22,6 +22,33 @@ Your final app should:
 - Display the plan clearly (and ideally explain the reasoning)
 - Include tests for the most important scheduling behaviors
 
+## Smarter Scheduling
+
+PawPal+ includes several features that make the scheduler more intelligent and flexible:
+
+### Task Sorting
+Tasks can be sorted before scheduling to control which ones get prioritized:
+- **By priority** — HIGH tasks are always scheduled before MEDIUM and LOW
+- **By duration** — shorter tasks are preferred when time is limited, fitting more tasks into the budget
+- **By scheduled time** — tasks with a set `HH:MM` start time are ordered chronologically; unscheduled tasks appear last
+
+### Filtering
+Any task list can be filtered to narrow down what's displayed or scheduled:
+- **By status** — show only completed or only pending tasks
+- **By type** — isolate tasks of a specific category (e.g. MEDICATION, WALK)
+- **By pet** — view tasks belonging to a single pet from a cross-pet task list
+
+### Recurring Tasks
+Tasks support a `frequency` field (`"once"`, `"daily"`, `"weekly"`). When a recurring task is marked complete via `pet.complete_task()`, the system automatically creates the next occurrence with an updated due date:
+- Daily tasks roll forward by 1 day
+- Weekly tasks roll forward by 7 days
+
+### Conflict Detection
+`Scheduler.detect_conflicts()` checks for problems before generating a schedule and returns plain-English warning strings:
+- Total task time across all pets exceeds the owner's available time
+- HIGH priority tasks alone exceed the time budget (flags critical tasks at risk)
+- Two tasks from different pets have overlapping scheduled times
+
 ## Getting started
 
 ### Setup

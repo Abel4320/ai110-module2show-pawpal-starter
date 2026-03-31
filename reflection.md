@@ -11,12 +11,6 @@
 
 **a. Initial design**
 
-
-
-**a. Initial design**
-
-- Briefly describe your initial UML design.
-- What classes did you include, and what responsibilities did you assign to each?
 My initial UML design included six classes and two enumerations:
 
 **Classes:**
@@ -43,10 +37,6 @@ My initial UML design included six classes and two enumerations:
 - Scheduler uses Owner and Pet to create a DailyPlan
 
 **b. Design changes**
-
-- Did your design change during implementation?
-- If yes, describe at least one change and why you made it.
-
 
 Yes, my design changed significantly during implementation. Here are the key changes:
 
