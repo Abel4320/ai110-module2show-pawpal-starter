@@ -76,7 +76,6 @@ if st.button("Add Pet"):
         st.session_state.owner.add_pet(pet)
         st.success(f"Added {pet_name} the {species}!")
 
-# Display all pets
 if st.session_state.pets:
     st.markdown("**Pets:**")
     for pet in st.session_state.pets:
@@ -103,6 +102,12 @@ else:
     with col4:
         task_type = st.selectbox("Type", ["WALK", "FEEDING", "MEDICATION", "ENRICHMENT", "GROOMING"])
 
+    col5, col6 = st.columns(2)
+    with col5:
+        frequency = st.selectbox("Frequency", ["once", "daily", "weekly"])
+    with col6:
+        due_date_input = st.date_input("Due date (optional)", value=None)
+
     if st.button("Add Task"):
         target_pet = next(p for p in st.session_state.pets if p.name == selected_pet_name)
         task = Task(
@@ -110,28 +115,70 @@ else:
             duration=int(duration),
             priority=Priority[priority],
             task_type=TaskType[task_type],
+            frequency=frequency,
+            due_date=due_date_input if due_date_input else None,
         )
         target_pet.add_task(task)
         st.success(f"Added '{task_name}' to {selected_pet_name}.")
 
-    # Show tasks per pet
-    st.markdown("**Current tasks by pet:**")
-    for pet in st.session_state.pets:
-        tasks = pet.get_tasks()
-        if tasks:
-            st.markdown(f"**{pet.name}**")
-            st.table([
-                {
-                    "Task": t.name,
-                    "Duration (min)": t.duration,
-                    "Priority": t.priority.value,
-                    "Type": t.task_type.value,
-                    "Done": t.completed,
-                }
-                for t in tasks
-            ])
+    st.divider()
+
+    # ── Task view with sort and filter controls ───────────────────────────────
+    st.subheader("View Tasks")
+
+    all_tasks = [t for p in st.session_state.pets for t in p.get_tasks()]
+
+    if not all_tasks:
+        st.info("No tasks added yet.")
+    else:
+        col_s, col_f1, col_f2, col_f3 = st.columns(4)
+        with col_s:
+            sort_by = st.selectbox("Sort by", ["Priority", "Duration"])
+        with col_f1:
+            filter_pet = st.selectbox("Filter by pet", ["All"] + pet_names)
+        with col_f2:
+            filter_status = st.selectbox("Filter by status", ["All", "Pending", "Completed"])
+        with col_f3:
+            filter_type = st.selectbox(
+                "Filter by type",
+                ["All", "WALK", "FEEDING", "MEDICATION", "ENRICHMENT", "GROOMING"],
+            )
+
+        # Apply sort
+        if sort_by == "Priority":
+            display_tasks = Scheduler.sort_by_priority(all_tasks)
         else:
-            st.markdown(f"**{pet.name}** — no tasks yet.")
+            display_tasks = Scheduler.sort_by_time(all_tasks)
+
+        # Apply filters
+        if filter_pet != "All":
+            display_tasks = Scheduler.filter_by_pet(display_tasks, filter_pet)
+        if filter_status == "Pending":
+            display_tasks = Scheduler.filter_by_status(display_tasks, completed=False)
+        elif filter_status == "Completed":
+            display_tasks = Scheduler.filter_by_status(display_tasks, completed=True)
+        if filter_type != "All":
+            display_tasks = Scheduler.filter_by_type(display_tasks, TaskType[filter_type])
+
+        if display_tasks:
+            st.dataframe(
+                [
+                    {
+                        "Pet": t.pet_name,
+                        "Task": t.name,
+                        "Duration (min)": t.duration,
+                        "Priority": t.priority.value.upper(),
+                        "Type": t.task_type.value,
+                        "Frequency": t.frequency,
+                        "Due Date": str(t.due_date) if t.due_date else "—",
+                        "Done": "Yes" if t.completed else "No",
+                    }
+                    for t in display_tasks
+                ],
+                use_container_width=True,
+            )
+        else:
+            st.info("No tasks match the selected filters.")
 
 st.divider()
 
@@ -145,26 +192,35 @@ if st.button("Generate Schedule"):
         st.warning("Add at least one pet first.")
     else:
         scheduler = Scheduler(st.session_state.owner)
+
+        # Show conflict warnings before the plan
+        conflicts = scheduler.detect_conflicts()
+        if conflicts:
+            st.markdown("**Conflict Warnings**")
+            for w in conflicts:
+                st.warning(w)
+
         st.session_state.plans = scheduler.generate_schedule()
 
 if st.session_state.plans:
     st.markdown("### Today's Schedule")
     for plan in st.session_state.plans:
-        with st.expander(f"{plan.pet.name} — {plan.total_time} min scheduled", expanded=True):
+        with st.expander(
+            f"{plan.pet.name} — {plan.total_time} min scheduled", expanded=True
+        ):
             if plan.scheduled_tasks:
-                st.table([
-                    {
-                        "Task": t.name,
-                        "Duration (min)": t.duration,
-                        "Priority": t.priority.value,
-                        "Type": t.task_type.value,
-                    }
-                    for t in plan.scheduled_tasks
-                ])
+                st.markdown("**Scheduled**")
+                for task in plan.scheduled_tasks:
+                    due = f" | due {task.due_date}" if task.due_date else ""
+                    recur = f" | repeats {task.frequency}" if task.frequency != "once" else ""
+                    st.success(
+                        f"[{task.priority.value.upper()}] {task.name} "
+                        f"— {task.duration} min{due}{recur}"
+                    )
             else:
                 st.info("No tasks could be scheduled.")
 
             if plan.skipped_tasks:
-                st.markdown("**Skipped:**")
+                st.markdown("**Skipped**")
                 for task, reason in plan.skipped_tasks:
-                    st.caption(f"- {task.name}: {reason}")
+                    st.error(f"{task.name}: {reason}")
