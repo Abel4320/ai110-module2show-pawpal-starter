@@ -49,6 +49,29 @@ Tasks support a `frequency` field (`"once"`, `"daily"`, `"weekly"`). When a recu
 - HIGH priority tasks alone exceed the time budget (flags critical tasks at risk)
 - Two tasks from different pets have overlapping scheduled times
 
+## Testing PawPal+
+
+### Run the tests
+
+```bash
+python -m pytest tests/test_pawpal.py -v
+```
+
+### What the tests cover
+
+| Area | Tests | What's verified |
+|---|---|---|
+| Core behavior | 2 | Task completion, adding tasks to a pet |
+| Sorting | 5 | `sort_by_priority` returns HIGH before LOW; `sort_by_time` returns shortest first; neither mutates the original list |
+| Recurring tasks | 6 | Daily tasks roll forward 1 day, weekly tasks roll forward 7 days; `"once"` tasks do not create a next occurrence; tasks without a due date are handled safely |
+| Conflict detection | 5 | Budget overrun, HIGH-only overrun, cross-pet time overlap, and empty pet edge cases all produce correct warnings or empty results |
+
+### Confidence level
+
+★★★★☆ (4/5)
+
+18 tests pass covering the core scheduling behaviors, sorting, recurrence, and conflict detection. The missing star reflects areas not yet tested: the Streamlit UI layer, `generate_schedule()` end-to-end across multiple pets, and edge cases like duplicate task names or zero-duration tasks.
+
 ## Getting started
 
 ### Setup
